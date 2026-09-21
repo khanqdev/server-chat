@@ -1,59 +1,71 @@
 package com.example.chat_server.controller;
 
-import com.example.chat_server.model.User;
-import com.example.chat_server.repository.UserRepository;
-import com.example.chat_server.security.JwtTokenProvider;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.ResponseEntity;
-import org.springframework.security.crypto.password.PasswordEncoder;
+import com.example.chat_server.dto.*;
+import com.example.chat_server.service.AuthService;
+import com.example.chat_server.service.GoogleAuthService;
+import com.example.chat_server.service.RegistrationService;
+import com.example.chat_server.service.TokenService;
+import jakarta.validation.Valid;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/auth")
 public class AuthController {
 
-    @Autowired
-    private UserRepository userRepository;
+    private final RegistrationService registrationService;
+    private final AuthService authService;
+    private final GoogleAuthService googleAuthService;
+    private final TokenService tokenService;
 
-    @Autowired
-    private PasswordEncoder passwordEncoder;
+    public AuthController(RegistrationService registrationService,
+                          AuthService authService,
+                          GoogleAuthService googleAuthService,
+                          TokenService tokenService) {
+        this.registrationService = registrationService;
+        this.authService = authService;
+        this.googleAuthService = googleAuthService;
+        this.tokenService = tokenService;
+    }
 
-    @Autowired
-    private JwtTokenProvider tokenProvider;
-
+    // Bước 1: gửi thông tin đăng ký, server gửi OTP tới email
     @PostMapping("/register")
-    public ResponseEntity<?> registerUser(@RequestBody User user) {
-        if (userRepository.findByUsername(user.getUsername()).isPresent()) {
-            return ResponseEntity.badRequest().body("Error: Username is already taken!");
-        }
+    @ResponseStatus(HttpStatus.ACCEPTED)
+    public RegisterResponse register(@Valid @RequestBody RegisterRequest request) {
+        return registrationService.register(request);
+    }
 
-        // Mã hóa mật khẩu trước khi lưu vào MongoDB
-        user.setPassword(passwordEncoder.encode(user.getPassword()));
-        userRepository.save(user);
+    @PostMapping("/register/resend-otp")
+    @ResponseStatus(HttpStatus.ACCEPTED)
+    public RegisterResponse resendOtp(@Valid @RequestBody ResendOtpRequest request) {
+        return registrationService.resendOtp(request.email());
+    }
 
-        return ResponseEntity.ok("User registered successfully!");
+    // Bước 2: xác thực OTP -> tạo tài khoản và đăng nhập luôn
+    @PostMapping("/register/verify")
+    @ResponseStatus(HttpStatus.CREATED)
+    public AuthResponse verifyOtp(@Valid @RequestBody VerifyOtpRequest request) {
+        return registrationService.verifyOtp(request);
     }
 
     @PostMapping("/login")
-    public ResponseEntity<?> authenticateUser(@RequestBody User loginRequest) {
-        Optional<User> userOptional = userRepository.findByUsername(loginRequest.getUsername());
-
-        if (userOptional.isPresent() && passwordEncoder.matches(loginRequest.getPassword(), userOptional.get().getPassword())) {
-            // Đăng nhập đúng, cấp Token JWT
-            String jwt = tokenProvider.generateToken(loginRequest.getUsername());
-            return ResponseEntity.ok(new JwtResponse(jwt));
-        }
-
-        return ResponseEntity.status(401).body("Error: Invalid username or password!");
+    public AuthResponse login(@Valid @RequestBody LoginRequest request) {
+        return authService.login(request);
     }
 
-    // Helper class trả về JSON chứa token
-    public static class JwtResponse {
-        private String token;
-        public JwtResponse(String token) { this.token = token; }
-        public String getToken() { return token; }
-        public void setToken(String token) { this.token = token; }
+    @PostMapping("/google")
+    public AuthResponse loginWithGoogle(@Valid @RequestBody GoogleLoginRequest request) {
+        return googleAuthService.login(request.idToken());
+    }
+
+    @PostMapping("/refresh")
+    public AuthResponse refresh(@Valid @RequestBody RefreshTokenRequest request) {
+        return tokenService.refresh(request.refreshToken());
+    }
+
+    @PostMapping("/logout")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void logout(@Valid @RequestBody RefreshTokenRequest request) {
+        tokenService.revoke(request.refreshToken());
     }
 }

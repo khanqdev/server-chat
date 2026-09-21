@@ -27,6 +27,10 @@ public class JwtTokenProvider {
         this.jwtExpirationInMs = jwtExpirationInMs;
     }
 
+    public long getExpirationSeconds() {
+        return jwtExpirationInMs / 1000;
+    }
+
     public String generateToken(String username) {
         Date now = new Date();
         return Jwts.builder()
