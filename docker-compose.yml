@@ -1,0 +1,36 @@
+# Chạy trên VM (Oracle Cloud Always Free…): docker compose up -d --build
+# MongoDB dùng Atlas (MONGODB_URI trong .env), không chạy Mongo trong compose.
+services:
+  app:
+    build: .
+    image: server-chat:latest
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      # Lấy IP thật của người dùng từ X-Forwarded-For (Vercel → Caddy → app) cho rate limit
+      SERVER_FORWARD_HEADERS_STRATEGY: framework
+      # Trong container mọi request đi qua Caddy, không có "localhost" thật
+      RATE_LIMIT_SKIP_LOCALHOST: "false"
+    # Không mở cổng 8080 ra ngoài; chỉ Caddy truy cập được qua mạng nội bộ của compose
+    expose:
+      - "8080"
+
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    depends_on:
+      - app
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      API_DOMAIN: ${API_DOMAIN:?Đặt API_DOMAIN trong .env, ví dụ webchat-api.duckdns.org}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  caddy_data:
+  caddy_config:

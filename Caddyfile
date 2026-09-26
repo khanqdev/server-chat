@@ -1,0 +1,21 @@
+# Caddy tự xin và gia hạn chứng chỉ HTTPS (Let's Encrypt) cho API_DOMAIN,
+# đồng thời chuyển tiếp cả HTTP lẫn WebSocket (wss) vào Spring Boot.
+{
+	# Frontend trên Vercel gọi /api qua rewrite của Vercel, nên IP người dùng nằm trong X-Forwarded-For.
+	# Vercel không công bố dải IP cố định → tin mọi nguồn. Hệ quả: ai gọi thẳng vào domain này
+	# có thể tự đặt X-Forwarded-For để né giới hạn theo IP (khoá theo tài khoản vẫn còn hiệu lực).
+	servers {
+		trusted_proxies static 0.0.0.0/0 ::/0
+	}
+}
+
+{$API_DOMAIN} {
+	encode gzip
+
+	reverse_proxy app:8080
+
+	log {
+		output stdout
+		format console
+	}
+}
