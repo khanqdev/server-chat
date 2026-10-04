@@ -3,6 +3,7 @@ package com.example.chat_server.controller;
 import com.example.chat_server.dto.*;
 import com.example.chat_server.service.AuthService;
 import com.example.chat_server.service.GoogleAuthService;
+import com.example.chat_server.service.PasswordResetService;
 import com.example.chat_server.service.RegistrationService;
 import com.example.chat_server.service.TokenService;
 import jakarta.validation.Valid;
@@ -10,22 +11,39 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/v1/auth")
+@RequestMapping("${app.api.prefix}/auth")
 public class AuthController {
 
     private final RegistrationService registrationService;
     private final AuthService authService;
     private final GoogleAuthService googleAuthService;
     private final TokenService tokenService;
+    private final PasswordResetService passwordResetService;
 
     public AuthController(RegistrationService registrationService,
                           AuthService authService,
                           GoogleAuthService googleAuthService,
-                          TokenService tokenService) {
+                          TokenService tokenService,
+                          PasswordResetService passwordResetService) {
         this.registrationService = registrationService;
         this.authService = authService;
         this.googleAuthService = googleAuthService;
         this.tokenService = tokenService;
+        this.passwordResetService = passwordResetService;
+    }
+
+    // Quên mật khẩu bước 1: gửi OTP tới email (luôn 202, kể cả khi email không tồn tại)
+    @PostMapping("/password/forgot")
+    @ResponseStatus(HttpStatus.ACCEPTED)
+    public ForgotPasswordResponse forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
+        return passwordResetService.requestReset(request.email());
+    }
+
+    // Quên mật khẩu bước 2: xác thực OTP và đặt mật khẩu mới, đăng xuất mọi thiết bị
+    @PostMapping("/password/reset")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
+        passwordResetService.resetPassword(request);
     }
 
     // Bước 1: gửi thông tin đăng ký, server gửi OTP tới email

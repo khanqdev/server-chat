@@ -38,10 +38,16 @@ public class RateLimitFilter extends OncePerRequestFilter {
     private final Rule login;
     private final Rule register;
     private final Rule otpVerify;
+    private final Rule passwordForgot;
+    private final Rule passwordReset;
 
-    public RateLimitFilter(RateLimitProperties properties, ObjectMapper objectMapper) {
+    // e.g. "/api/v1/auth"; endpoint-specific rules are matched relative to it
+    private final String authBase;
+
+    public RateLimitFilter(RateLimitProperties properties, ObjectMapper objectMapper, String apiPrefix) {
         this.properties = properties;
         this.objectMapper = objectMapper;
+        this.authBase = apiPrefix + "/auth";
         this.buckets = Caffeine.newBuilder()
                 // Bounded so a flood of spoofed/rotating IPs cannot exhaust memory
                 .maximumSize(properties.maxTrackedClients())
@@ -52,6 +58,9 @@ public class RateLimitFilter extends OncePerRequestFilter {
         this.login = rule("login", properties.loginPerMinute(), Duration.ofMinutes(1));
         this.register = rule("register", properties.registerPerHour(), Duration.ofHours(1));
         this.otpVerify = rule("otp-verify", properties.otpVerifyPerHour(), Duration.ofHours(1));
+        // Same budgets as registration (sends an email / checks an OTP) but counted separately
+        this.passwordForgot = rule("password-forgot", properties.registerPerHour(), Duration.ofHours(1));
+        this.passwordReset = rule("password-reset", properties.otpVerifyPerHour(), Duration.ofHours(1));
     }
 
     private static Rule rule(String name, int capacity, Duration window) {
@@ -108,11 +117,17 @@ public class RateLimitFilter extends OncePerRequestFilter {
         if (!"POST".equalsIgnoreCase(request.getMethod())) {
             return null;
         }
-        return switch (request.getRequestURI()) {
-            case "/api/v1/auth/login", "/api/v1/auth/google" -> login;
+        String uri = request.getRequestURI();
+        if (!uri.startsWith(authBase + "/")) {
+            return null;
+        }
+        return switch (uri.substring(authBase.length())) {
+            case "/login", "/google" -> login;
             // Both endpoints send an email, so they share one budget
-            case "/api/v1/auth/register", "/api/v1/auth/register/resend-otp" -> register;
-            case "/api/v1/auth/register/verify" -> otpVerify;
+            case "/register", "/register/resend-otp" -> register;
+            case "/register/verify" -> otpVerify;
+            case "/password/forgot" -> passwordForgot;
+            case "/password/reset" -> passwordReset;
             default -> null;
         };
     }

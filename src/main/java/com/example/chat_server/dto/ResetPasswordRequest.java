@@ -1,0 +1,21 @@
+package com.example.chat_server.dto;
+
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
+
+public record ResetPasswordRequest(
+        @NotBlank(message = "Email là bắt buộc")
+        @Email(message = "Email không hợp lệ")
+        String email,
+
+        @NotBlank(message = "OTP là bắt buộc")
+        @Pattern(regexp = "^\\d{6}$", message = "OTP gồm 6 chữ số")
+        String otp,
+
+        // BCrypt only uses the first 72 bytes
+        @NotBlank(message = "Mật khẩu mới là bắt buộc")
+        @Size(min = 8, max = 72, message = "Mật khẩu dài 8-72 ký tự")
+        String newPassword
+) {}

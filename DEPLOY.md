@@ -46,6 +46,7 @@ Biến quan trọng trong `.env`:
 | `ALLOWED_ORIGINS` | Origin của frontend được mở WebSocket, vd `https://webchat.vercel.app,https://webchat-*.vercel.app` |
 | `MONGODB_URI` | Atlas: thêm IP public của VM vào **Network Access** |
 | `JWT_SECRET` | `openssl rand -base64 64` |
+| `API_PREFIX` | Tiền tố REST API, mặc định `/api/v1` (frontend đặt `VITE_API_BASE_URL` trùng giá trị này) |
 
 `docker-compose.yml` tự đặt `SERVER_FORWARD_HEADERS_STRATEGY=framework` (lấy IP thật từ `X-Forwarded-For` cho rate limit) và `RATE_LIMIT_SKIP_LOCALHOST=false`.
 

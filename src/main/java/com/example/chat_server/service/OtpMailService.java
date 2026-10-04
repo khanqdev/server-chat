@@ -49,4 +49,26 @@ public class OtpMailService {
 
         mailSender.getObject().send(message);
     }
+
+    public void sendPasswordResetOtp(String email, String fullName, String otp, Duration ttl) {
+        if (mailHost.isBlank()) {
+            log.warn("[DEV] MAIL_HOST chưa cấu hình, không gửi email. OTP đặt lại mật khẩu cho {}: {}", email, otp);
+            return;
+        }
+
+        SimpleMailMessage message = new SimpleMailMessage();
+        message.setFrom(from);
+        message.setTo(email);
+        message.setSubject("Mã đặt lại mật khẩu tài khoản Chat");
+        message.setText("""
+                Xin chào %s,
+
+                Mã OTP đặt lại mật khẩu của bạn là: %s
+
+                Mã có hiệu lực trong %d phút. Không chia sẻ mã này cho bất kỳ ai.
+                Nếu bạn không yêu cầu đặt lại mật khẩu, hãy bỏ qua email này; mật khẩu của bạn không thay đổi.
+                """.formatted(fullName, otp, ttl.toMinutes()));
+
+        mailSender.getObject().send(message);
+    }
 }

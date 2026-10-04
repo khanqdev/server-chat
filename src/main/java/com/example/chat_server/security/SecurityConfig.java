@@ -1,5 +1,6 @@
 package com.example.chat_server.security;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -13,6 +14,10 @@ import org.springframework.security.web.SecurityFilterChain;
 @EnableWebSecurity
 public class SecurityConfig {
 
+    // Tiền tố chung của REST API, cấu hình bằng API_PREFIX trong .env
+    @Value("${app.api.prefix}")
+    private String apiPrefix;
+
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder(); // Mã hóa mật khẩu an toàn
@@ -24,7 +29,7 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable()) // Tắt CSRF vì dùng REST API / JWT
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/v1/auth/**", "/ws-chat/**", "/error").permitAll() // Cho phép đăng ký, đăng nhập và kết nối WS không cần token trước
+                        .requestMatchers(apiPrefix + "/auth/**", "/ws-chat/**", "/error").permitAll() // Cho phép đăng ký, đăng nhập và kết nối WS không cần token trước
                         .anyRequest().authenticated()
                 );
 
