@@ -6,16 +6,13 @@ import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.time.Instant;
 
-// Registration waiting for OTP confirmation; the real User is created only after the OTP is verified
-@Document(collection = "pending_registrations")
-public class PendingRegistration {
-    // Email is the key, so registering again with the same email replaces the previous attempt
+// Password reset waiting for OTP confirmation; the password only changes after the OTP is verified
+@Document(collection = "password_resets")
+public class PasswordReset {
+    // Email is the key, so requesting again replaces the previous OTP
     @Id
     private String email;
 
-    private String fullName;
-    private String language;
-    private String passwordHash;
     private String otpHash;
     private int attempts;
     private Instant lastSentAt;
@@ -29,12 +26,6 @@ public class PendingRegistration {
 
     public String getEmail() { return email; }
     public void setEmail(String email) { this.email = email; }
-    public String getFullName() { return fullName; }
-    public void setFullName(String fullName) { this.fullName = fullName; }
-    public String getLanguage() { return language; }
-    public void setLanguage(String language) { this.language = language; }
-    public String getPasswordHash() { return passwordHash; }
-    public void setPasswordHash(String passwordHash) { this.passwordHash = passwordHash; }
     public String getOtpHash() { return otpHash; }
     public void setOtpHash(String otpHash) { this.otpHash = otpHash; }
     public int getAttempts() { return attempts; }

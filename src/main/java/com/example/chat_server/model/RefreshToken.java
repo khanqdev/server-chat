@@ -18,6 +18,10 @@ public class RefreshToken {
     @Indexed
     private String userId;
 
+    // Set when the token is rotated. The document is kept until it expires so that a later use of the
+    // same token can be recognised as reuse (theft) instead of looking like an unknown token.
+    private Instant revokedAt;
+
     @Indexed(expireAfter = "0s")
     private Instant expiresAt;
 
@@ -35,6 +39,8 @@ public class RefreshToken {
     public void setTokenHash(String tokenHash) { this.tokenHash = tokenHash; }
     public String getUserId() { return userId; }
     public void setUserId(String userId) { this.userId = userId; }
+    public Instant getRevokedAt() { return revokedAt; }
+    public void setRevokedAt(Instant revokedAt) { this.revokedAt = revokedAt; }
     public Instant getExpiresAt() { return expiresAt; }
     public void setExpiresAt(Instant expiresAt) { this.expiresAt = expiresAt; }
 }

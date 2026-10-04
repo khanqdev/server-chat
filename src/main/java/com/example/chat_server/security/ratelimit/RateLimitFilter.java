@@ -1,6 +1,7 @@
 package com.example.chat_server.security.ratelimit;
 
-import com.example.chat_server.exception.GlobalExceptionHandler.ErrorResponse;
+import com.example.chat_server.exception.ErrorCode;
+import com.example.chat_server.exception.GlobalExceptionHandler.ErrorBody;
 import tools.jackson.databind.ObjectMapper;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
@@ -20,7 +21,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 import java.time.Duration;
-import java.time.Instant;
+import java.util.Map;
 import java.util.Set;
 
 public class RateLimitFilter extends OncePerRequestFilter {
@@ -38,10 +39,16 @@ public class RateLimitFilter extends OncePerRequestFilter {
     private final Rule login;
     private final Rule register;
     private final Rule otpVerify;
+    private final Rule passwordForgot;
+    private final Rule passwordReset;
 
-    public RateLimitFilter(RateLimitProperties properties, ObjectMapper objectMapper) {
+    // e.g. "/api/v1/auth"; endpoint-specific rules are matched relative to it
+    private final String authBase;
+
+    public RateLimitFilter(RateLimitProperties properties, ObjectMapper objectMapper, String apiPrefix) {
         this.properties = properties;
         this.objectMapper = objectMapper;
+        this.authBase = apiPrefix + "/auth";
         this.buckets = Caffeine.newBuilder()
                 // Bounded so a flood of spoofed/rotating IPs cannot exhaust memory
                 .maximumSize(properties.maxTrackedClients())
@@ -52,6 +59,9 @@ public class RateLimitFilter extends OncePerRequestFilter {
         this.login = rule("login", properties.loginPerMinute(), Duration.ofMinutes(1));
         this.register = rule("register", properties.registerPerHour(), Duration.ofHours(1));
         this.otpVerify = rule("otp-verify", properties.otpVerifyPerHour(), Duration.ofHours(1));
+        // Same budgets as registration (sends an email / checks an OTP) but counted separately
+        this.passwordForgot = rule("password-forgot", properties.registerPerHour(), Duration.ofHours(1));
+        this.passwordReset = rule("password-reset", properties.otpVerifyPerHour(), Duration.ofHours(1));
     }
 
     private static Rule rule(String name, int capacity, Duration window) {
@@ -108,11 +118,17 @@ public class RateLimitFilter extends OncePerRequestFilter {
         if (!"POST".equalsIgnoreCase(request.getMethod())) {
             return null;
         }
-        return switch (request.getRequestURI()) {
-            case "/api/auth/login", "/api/auth/google" -> login;
+        String uri = request.getRequestURI();
+        if (!uri.startsWith(authBase + "/")) {
+            return null;
+        }
+        return switch (uri.substring(authBase.length())) {
+            case "/login", "/google" -> login;
             // Both endpoints send an email, so they share one budget
-            case "/api/auth/register", "/api/auth/register/resend-otp" -> register;
-            case "/api/auth/register/verify" -> otpVerify;
+            case "/register", "/register/resend-otp" -> register;
+            case "/register/verify" -> otpVerify;
+            case "/password/forgot" -> passwordForgot;
+            case "/password/reset" -> passwordReset;
             default -> null;
         };
     }
@@ -122,10 +138,9 @@ public class RateLimitFilter extends OncePerRequestFilter {
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
         response.setCharacterEncoding("UTF-8");
         response.setHeader(HttpHeaders.RETRY_AFTER, String.valueOf(retryAfterSeconds));
-        objectMapper.writeValue(response.getOutputStream(), new ErrorResponse(
-                HttpStatus.TOO_MANY_REQUESTS.value(),
-                "Bạn thao tác quá nhanh, vui lòng thử lại sau " + retryAfterSeconds + " giây",
-                null,
-                Instant.now()));
+        objectMapper.writeValue(response.getOutputStream(), ErrorBody.of(
+                ErrorCode.RATE_LIMITED,
+                "Too many requests; retry after " + retryAfterSeconds + " seconds",
+                Map.of("retryAfterSec", retryAfterSeconds)));
     }
 }
