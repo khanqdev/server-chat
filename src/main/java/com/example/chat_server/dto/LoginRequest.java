@@ -1,11 +1,13 @@
 package com.example.chat_server.dto;
 
+import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 
 public record LoginRequest(
-        @NotBlank(message = "Username là bắt buộc")
-        String username,
+        @NotBlank(message = "email is required")
+        @Email(message = "email is invalid")
+        String email,
 
-        @NotBlank(message = "Mật khẩu là bắt buộc")
+        @NotBlank(message = "password is required")
         String password
 ) {}

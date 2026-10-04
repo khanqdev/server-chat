@@ -13,12 +13,15 @@ public class PendingRegistration {
     @Id
     private String email;
 
-    private String username;
     private String fullName;
+    private String language;
     private String passwordHash;
     private String otpHash;
     private int attempts;
     private Instant lastSentAt;
+
+    // Set after too many wrong OTPs; until then no new OTP can be requested or verified for this email
+    private Instant lockedUntil;
 
     // MongoDB TTL index removes the document once this time passes (checked roughly every 60s)
     @Indexed(expireAfter = "0s")
@@ -26,10 +29,10 @@ public class PendingRegistration {
 
     public String getEmail() { return email; }
     public void setEmail(String email) { this.email = email; }
-    public String getUsername() { return username; }
-    public void setUsername(String username) { this.username = username; }
     public String getFullName() { return fullName; }
     public void setFullName(String fullName) { this.fullName = fullName; }
+    public String getLanguage() { return language; }
+    public void setLanguage(String language) { this.language = language; }
     public String getPasswordHash() { return passwordHash; }
     public void setPasswordHash(String passwordHash) { this.passwordHash = passwordHash; }
     public String getOtpHash() { return otpHash; }
@@ -38,6 +41,8 @@ public class PendingRegistration {
     public void setAttempts(int attempts) { this.attempts = attempts; }
     public Instant getLastSentAt() { return lastSentAt; }
     public void setLastSentAt(Instant lastSentAt) { this.lastSentAt = lastSentAt; }
+    public Instant getLockedUntil() { return lockedUntil; }
+    public void setLockedUntil(Instant lockedUntil) { this.lockedUntil = lockedUntil; }
     public Instant getExpiresAt() { return expiresAt; }
     public void setExpiresAt(Instant expiresAt) { this.expiresAt = expiresAt; }
 }

@@ -1,3 +1,6 @@
 package com.example.chat_server.dto;
 
-public record RegisterResponse(String message, String email, long otpExpiresInSeconds) {}
+import java.time.Instant;
+
+// 202 body of every endpoint that emails an OTP (register, resend, forgot password)
+public record RegisterResponse(String email, Instant otpExpiresAt, Instant resendAvailableAt) {}

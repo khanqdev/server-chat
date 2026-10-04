@@ -1,6 +1,7 @@
 package com.example.chat_server.security.ratelimit;
 
-import com.example.chat_server.exception.GlobalExceptionHandler.ErrorResponse;
+import com.example.chat_server.exception.ErrorCode;
+import com.example.chat_server.exception.GlobalExceptionHandler.ErrorBody;
 import tools.jackson.databind.ObjectMapper;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
@@ -20,7 +21,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 import java.time.Duration;
-import java.time.Instant;
+import java.util.Map;
 import java.util.Set;
 
 public class RateLimitFilter extends OncePerRequestFilter {
@@ -137,10 +138,9 @@ public class RateLimitFilter extends OncePerRequestFilter {
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
         response.setCharacterEncoding("UTF-8");
         response.setHeader(HttpHeaders.RETRY_AFTER, String.valueOf(retryAfterSeconds));
-        objectMapper.writeValue(response.getOutputStream(), new ErrorResponse(
-                HttpStatus.TOO_MANY_REQUESTS.value(),
-                "Bạn thao tác quá nhanh, vui lòng thử lại sau " + retryAfterSeconds + " giây",
-                null,
-                Instant.now()));
+        objectMapper.writeValue(response.getOutputStream(), ErrorBody.of(
+                ErrorCode.RATE_LIMITED,
+                "Too many requests; retry after " + retryAfterSeconds + " seconds",
+                Map.of("retryAfterSec", retryAfterSeconds)));
     }
 }
