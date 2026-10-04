@@ -84,14 +84,24 @@ public class GoogleAuthService {
             return tokenService.issueTokens(linked.get());
         }
 
-        // Contract (M1-08): an existing email account is never linked silently; the person has to sign in
-        // with the password first and link Google from there
-        if (userRepository.existsByEmail(email)) {
-            throw new ApiException(HttpStatus.CONFLICT, ErrorCode.ACCOUNT_LINK_REQUIRED,
-                    "This email already has an account; sign in with the password to link Google");
+        // Both sides have verified ownership of the email (OTP here, email_verified at Google), so an existing
+        // account with this email is linked to Google automatically instead of answering ACCOUNT_LINK_REQUIRED
+        Optional<User> existing = userRepository.findByEmail(email);
+        if (existing.isPresent()) {
+            return tokenService.issueTokens(linkGoogle(existing.get(), googleId));
         }
 
         return tokenService.issueTokens(createGoogleUser(jwt, email, googleId), true);
+    }
+
+    private User linkGoogle(User user, String googleId) {
+        if (user.getGoogleId() != null) {
+            // The email already belongs to a different Google account (Google changed the subject, or a reused address)
+            throw new ApiException(HttpStatus.CONFLICT, ErrorCode.ACCOUNT_LINK_REQUIRED,
+                    "This email is already linked to another Google account");
+        }
+        user.setGoogleId(googleId);
+        return userRepository.save(user);
     }
 
     private User createGoogleUser(Jwt jwt, String email, String googleId) {
