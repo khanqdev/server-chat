@@ -109,10 +109,10 @@ public class RateLimitFilter extends OncePerRequestFilter {
             return null;
         }
         return switch (request.getRequestURI()) {
-            case "/api/auth/login", "/api/auth/google" -> login;
+            case "/api/v1/auth/login", "/api/v1/auth/google" -> login;
             // Both endpoints send an email, so they share one budget
-            case "/api/auth/register", "/api/auth/register/resend-otp" -> register;
-            case "/api/auth/register/verify" -> otpVerify;
+            case "/api/v1/auth/register", "/api/v1/auth/register/resend-otp" -> register;
+            case "/api/v1/auth/register/verify" -> otpVerify;
             default -> null;
         };
     }

@@ -4,7 +4,7 @@ Sơ đồ:
 
 ```
 Trình duyệt ──► https://<app>.vercel.app          (frontend tĩnh)
-            ├─► /api/*  → Vercel rewrite ─► https://API_DOMAIN/api/*  ─► Caddy ─► Spring Boot
+            ├─► /api/*  → Vercel rewrite ─► https://API_DOMAIN/api/*  (API ở /api/v1/...)  ─► Caddy ─► Spring Boot
             └─► wss://API_DOMAIN/ws-chat/websocket (WebSocket đi thẳng) ─► Caddy ─► Spring Boot
 MongoDB: Atlas M0 (MONGODB_URI)
 ```

@@ -24,7 +24,7 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable()) // Tắt CSRF vì dùng REST API / JWT
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/auth/**", "/ws-chat/**", "/error").permitAll() // Cho phép đăng ký, đăng nhập và kết nối WS không cần token trước
+                        .requestMatchers("/api/v1/auth/**", "/ws-chat/**", "/error").permitAll() // Cho phép đăng ký, đăng nhập và kết nối WS không cần token trước
                         .anyRequest().authenticated()
                 );
 
