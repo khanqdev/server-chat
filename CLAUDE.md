@@ -118,7 +118,7 @@ TTL-expired), `RefreshToken` (hash only, TTL-expired), `ChatMessage` ("messages"
 
 - Java 25, Spring Boot 4.1.1, Maven wrapper (`./mvnw`). Do not switch to Gradle or an older JDK.
 - Frontend: React with TypeScript, shadcn/ui, Tailwind CSS, react-i18next (vi/en). Lives in `frontend/` or in the sibling FE repo.
-- Realtime: STOMP. Current code exposes `/ws-chat` (SockJS). The agreed contract moves to `/ws` with `/user/queue/events` and `/user/queue/acks`. Follow the design doc in `docs/design/`, and do not add new realtime features on the old endpoint.
+- Realtime: STOMP. Current code exposes `/ws-chat` (SockJS). The agreed contract moves to `/ws` with `/user/queue/events` and `/user/queue/acks`. The contract is section 3 of `docs/source/05-api-contract.md`; feature designs in `docs/design/` refine it. Do not add new realtime features on the old endpoint.
 - Note: this repo already contains some features beyond MVP1 (group chat, typing indicators, WebRTC signaling). Before building anything, check the existing code. Do not duplicate or rewrite existing features.
 
 ## Team workflow (agents in `.claude/agents/`)
@@ -148,10 +148,24 @@ The Lead never moves to the next stage without approval. If an agent reports a b
 ### Repo layout for agents
 
 - Backend: `src/main/java/com/example/chat_server/` (Spring Boot), tests in `src/test/`.
-- Docs: `docs/requirements/`, `docs/design/`, `docs/adr/`, `docs/reviews/`, and `docs/mvp1.md`.
+- Docs: `docs/source/` (planning docs, read-only input, see below), `docs/requirements/`, `docs/design/`, `docs/adr/`, `docs/reviews/`.
 - Keep the Vietnamese error-message convention when adding new `ApiException` messages.
 
-## MVP scope and status (source: `docs/source/03-roadmap-mvp-v0.4.md`)
+## Source docs (`docs/source/`)
+
+Planning docs written in Vietnamese with the owner. They are the input for every agent. Agents read them but do not edit them; if one is wrong or out of date, report it to the Lead.
+
+| File | What it holds | Main readers |
+|------|---------------|--------------|
+| `01-phan-tich-nghiep-vu.md` | Business analysis: modules M1–M16, business rules, priorities | product |
+| `02-user-stories-mvp.md` | User stories with story IDs and acceptance criteria (v0.2) | product, qa |
+| `03-roadmap-mvp-moi.md` | Roadmap v0.4: "MVP gọn" scope, sprints, milestones | product, Lead |
+| `04-kien-truc-ky-thuat.md` | Technical architecture and tech stack (v0.1) | architect, backend |
+| `05-api-contract.md` | API contract v0.2: DTOs, REST `/api/v1`, STOMP `/ws`, limits, error codes | architect, backend, frontend, qa |
+
+If the contract and the current code disagree, the contract wins for new work. Existing endpoints already aligned with it are the auth endpoints (contract section 2.1).
+
+## MVP scope and status (source: `docs/source/03-roadmap-mvp-moi.md`)
 
 - Scope: "MVP gọn", 120 story points. Target launch 28–31/01/2027, before Tết (06/02/2027). Feature freeze 17/01/2027.
 - Users: about 100 people, email and Google sign-in only. No phone sign-in in MVP.
