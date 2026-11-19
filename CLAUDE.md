@@ -29,6 +29,29 @@ Build/run via the Maven wrapper (no local Maven install needed):
 
 On Windows use `mvnw.cmd` instead of `./mvnw` from `cmd.exe`/PowerShell if `./mvnw` doesn't resolve.
 
+**JDK 25 is required.** The project compiles with `--release 25`, so a JDK 21 default fails with
+`release version 25 not supported`. Point `JAVA_HOME` at a JDK 25 before any `./mvnw` command, in the
+same shell, for example:
+
+```
+# Git Bash on the owner's Windows machine
+export JAVA_HOME="/c/Users/choco/.jdk/jdk-25.0.2"; export PATH="$JAVA_HOME/bin:$PATH"
+# PowerShell
+$env:JAVA_HOME = "C:\Users\choco\.jdk\jdk-25.0.2"; $env:Path = "$env:JAVA_HOME\bin;$env:Path"
+```
+
+Check with `./mvnw -v` (it must print `Java version: 25`).
+
+### Tests and MongoDB
+
+Tests use the `test` profile (`src/test/resources/application-test.properties`, test-only JWT key,
+rate limit off) and a real MongoDB 8 started by Testcontainers (`TestcontainersConfiguration`,
+`@ServiceConnection`). This needs Docker running. Without Docker, tests marked
+`@Testcontainers(disabledWithoutDocker = true)` are **skipped**, not failed. In that case say "skipped,
+no Docker" in the report; skipped is not the same as passed. New integration tests should
+`@Import(TestcontainersConfiguration.class)`, use `@ActiveProfiles("test")`, and carry the same
+`@Testcontainers(disabledWithoutDocker = true)` annotation. Pure unit tests need neither.
+
 ### Local environment
 
 Configuration is environment-driven via `spring.config.import=optional:file:.env[.properties]` in
@@ -117,7 +140,7 @@ TTL-expired), `RefreshToken` (hash only, TTL-expired), `ChatMessage` ("messages"
 ## Stack versions
 
 - Java 25, Spring Boot 4.1.1, Maven wrapper (`./mvnw`). Do not switch to Gradle or an older JDK.
-- Frontend: React with TypeScript, shadcn/ui, Tailwind CSS, react-i18next (vi/en). Lives in `frontend/` or in the sibling FE repo.
+- Frontend (not in this repo): React + Vite + TypeScript in the separate `web-chat` repo. This repo is backend only; agents here do not write frontend code.
 - Realtime: STOMP. Current code exposes `/ws-chat` (SockJS). The agreed contract moves to `/ws` with `/user/queue/events` and `/user/queue/acks`. The contract is section 3 of `docs/source/05-api-contract.md`; feature designs in `docs/design/` refine it. Do not add new realtime features on the old endpoint.
 - Note: this repo already contains some features beyond MVP1 (group chat, typing indicators, WebRTC signaling). Before building anything, check the existing code. Do not duplicate or rewrite existing features.
 
@@ -125,15 +148,15 @@ TTL-expired), `RefreshToken` (hash only, TTL-expired), `ChatMessage` ("messages"
 
 This session is the **Lead**. Subagents cannot call other subagents, so the Lead coordinates them.
 
-Agents: `product`, `architect`, `backend`, `frontend`, `qa`. Their prompts are in `.claude/agents/`.
+Agents: `product`, `architect`, `backend`, `qa`. Their prompts are in `.claude/agents/`.
 
 ### Stages and owner approval (mandatory)
 
 1. **Requirements:** Lead calls `product` to write `docs/requirements/<feature>.md`. **Stop and wait for the owner to approve.**
 2. **Design:** Lead calls `architect` to write `docs/design/<feature>.md` and ADRs in `docs/adr/`. **Stop and wait for the owner to approve.**
-3. **Build:** Lead creates branch `feat/<feature>` from `main`. Then `backend` and/or `frontend` implement, each on that branch. Only start after step 2 is approved.
-4. **Verify:** `qa` checks acceptance criteria, runs tests, and writes `docs/reviews/<feature>.md`. Fixes go back to `backend` or `frontend`.
-5. **Merge:** Lead opens a PR with `gh pr create`. **Only the owner merges.** Agents never merge to `main`.
+3. **Build:** `backend` implements directly on `master` (no feature branch), in small commits. Only start after step 2 is approved.
+4. **Verify:** `qa` checks acceptance criteria, runs tests, and writes `docs/reviews/<feature>.md`. Fixes go back to `backend`.
+5. **Review and push:** Lead reports the commits to the owner. **Agents commit locally on `master` but never push**; the owner reviews the commits and pushes.
 
 The Lead never moves to the next stage without approval. If an agent reports a blocker, the Lead reports it to the owner.
 
@@ -141,8 +164,8 @@ The Lead never moves to the next stage without approval. If an agent reports a b
 
 - Write docs and comments in the style of this file: docs in English. Code comments and user-facing error messages stay in Vietnamese, as described above.
 - Never read, print, or commit `.env` files, JWT secrets, Google client secrets, or MongoDB connection strings. Use placeholders in docs.
-- Keep commits small with clear messages. Do not commit directly to `main`.
-- Run `./mvnw test` (and frontend lint/tests if changed) before reporting success. Do not claim tests pass without running them.
+- Work on `master`. Keep commits small with clear messages, one feature per series of commits. Never push, merge, rebase or rewrite history.
+- Run `./mvnw test` (with JDK 25, see Commands) before reporting success. Do not claim tests pass without running them.
 - Respect rate-limit and auth design in this file. Do not weaken `JwtChannelInterceptor`, sender trust rules in `ChatController`, or refresh-token rotation.
 
 ### Repo layout for agents
@@ -161,7 +184,7 @@ Planning docs written in Vietnamese with the owner. They are the input for every
 | `02-user-stories-mvp.md` | User stories with story IDs and acceptance criteria (v0.2) | product, qa |
 | `03-roadmap-mvp-moi.md` | Roadmap v0.4: "MVP gọn" scope, sprints, milestones | product, Lead |
 | `04-kien-truc-ky-thuat.md` | Technical architecture and tech stack (v0.1) | architect, backend |
-| `05-api-contract.md` | API contract v0.2: DTOs, REST `/api/v1`, STOMP `/ws`, limits, error codes | architect, backend, frontend, qa |
+| `05-api-contract.md` | API contract v0.2: DTOs, REST `/api/v1`, STOMP `/ws`, limits, error codes | architect, backend, qa |
 
 If the contract and the current code disagree, the contract wins for new work. Existing endpoints already aligned with it are the auth endpoints (contract section 2.1).
 
